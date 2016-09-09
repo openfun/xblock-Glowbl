@@ -1,0 +1,32 @@
+/* CSS for FUNGlowblXBlock */
+
+
+.fun_glowbl_block ul li {
+    display: inline-block;
+}
+
+.fun_glowbl_block .logo {
+    width: 25%;
+}
+
+.fun_glowbl_block .information {
+    width: 50%;
+}
+
+.fun_glowbl_block .information .title {
+    font-size: 24px;
+}
+
+.fun_glowbl_block .information  .description {
+    color: red;
+    margin-top: 20px;
+}
+
+.fun_glowbl_block .information  .rendezvous {
+    color: blue;
+    margin-top: 20px;
+}
+
+.fun_glowbl_block .button {
+    width: 20%;
+}
