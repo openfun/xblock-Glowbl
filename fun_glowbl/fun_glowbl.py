@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import pkg_resources
-
+from webob import Response
+from pprint import pprint
 from django.conf import settings
+
+from openedx.core.djangoapps.user_api.accounts.image_helpers import get_profile_image_names
 
 from xblock.core import String, Scope, XBlock
 from xblock.fragment import Fragment
@@ -10,7 +13,7 @@ from xblockutils.resources import ResourceLoader
 from xblockutils.studio_editable import StudioEditableXBlockMixin
 
 from lti_consumer import LtiConsumerXBlock
-
+from lti_consumer.lti import LtiConsumer
 
 def _(text):
     return text
@@ -54,6 +57,8 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
         self.lti_key = GLOWBL_LTI_KEY
         self.lti_secret = GLOWBL_LTI_SECRET
         self.launch_url = GLOWBL_LTI_ENDPOINT
+        self.ask_to_send_username = True
+        self.ask_to_send_email = True
         self.custom_parameters = []
 
     def _is_studio(self):
@@ -111,22 +116,43 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
             'launch_url': GLOWBL_LAUNCH_URL,
         }
 
+    @XBlock.handler
+    def lti_launch_handler(self, request, suffix=''):  # pylint: disable=unused-argument
+        """
+        XBlock handler for launching the LTI provider.
 
+        Displays a form which is submitted via Javascript
+        to send the LTI launch POST request to the LTI
+        provider.
 
-    # TO-DO: change this to create the scenarios you'd like to see in the
-    # workbench while developing your XBlock.
-    @staticmethod
-    def workbench_scenarios():
-        """A canned scenario for display in the workbench."""
-        return [
-            ("FUNGlowblXBlock",
-             """<fun_glowbl/>
-             """),
-            ("Multiple FUNGlowblXBlock",
-             """<vertical_demo>
-                <fun_glowbl/>
-                <fun_glowbl/>
-                <fun_glowbl/>
-                </vertical_demo>
-             """),
-        ]
+        Arguments:
+            request (xblock.django.request.DjangoWebobRequest): Request object for current HTTP request
+            suffix (unicode): Request path after "lti_launch_handler/"
+
+        Returns:
+            webob.response: HTML LTI launch form
+        """
+        self.lti_consumer = LtiConsumer(self)
+        self.lti_parameters = self.lti_consumer.get_signed_lti_parameters()
+        pprint(self.lti_parameters)
+        loader = ResourceLoader(__name__)
+        context = self._get_context_for_template()
+        context.update({'lti_parameters': self.lti_parameters})
+        template = loader.render_mako_template('static/html/lti_launch.html', context)
+        return Response(template, content_type='text/html')
+
+    @property
+    def prefixed_custom_parameters(self):
+        """
+        This function is called by LtiConsumer to add custom values to lti parameters
+        We add profile image and xblock fields.
+        """
+        username = self.runtime.get_real_user(self.runtime.anonymous_student_id).username
+        images = get_profile_image_names(username)
+        custom_parameters = {
+            'custom_profile_image_url': 'https://fun-mooc.fr/media/profile-images/%s' % images[50],
+            'custom_title': self.title,
+            'custom_description': self.description,
+            'custom_rendezvous': self.rendezvous,
+        }
+        return custom_parameters
