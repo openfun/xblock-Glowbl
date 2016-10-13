@@ -3,14 +3,22 @@
 
 .fun_glowbl_block ul li {
     display: inline-block;
+    vertical-align: middle;
 }
 
+.fun_glowbl_block .f1tier {
+    width: 33%;
+}
+.fun_glowbl_block .f2tier {
+    width: 66%;
+}
+
+
+
 .fun_glowbl_block .logo {
-    width: 25%;
 }
 
 .fun_glowbl_block .information {
-    width: 50%;
 }
 
 .fun_glowbl_block .information .title {
@@ -28,5 +36,4 @@
 }
 
 .fun_glowbl_block .button-new-tab {
-    width: 20%;
 }

@@ -6,28 +6,38 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 
 
 <ul>
-<li class="logo">
-    <img src="${logo}">
-</li>
+    <li class="f1tier logo">
+        <img src="${logo}">
+    </li>
 
-<li class="information">
-    <span class="title">
-    ${title}
-    </span>
-    <p class="description">
-    ${description}
+    <li class="f2tier information">
+        <span class="title">
+            ${title}
+        </span>
+        <p class="description">
+            ${description}
+        </p>
+        <p class="rendezvous">
+            ${rendezvous}
+        </p>
+    </li>
+</ul>
 
-    </p>
-    <p class="rendezvous">
-    ${rendezvous}
-    </p>
-</li>
+<ul>
+    <li class="f2tier">
+        <p>Glowbl est un partenaire tiers, vous avez le choix de lui transmettre ou non les informations personnelles vous concernant...
+        </p>
+        <label><input type="checkbox" id="" value="username" checked="checked">Transmettre votre <strong>pseudonyme</strong> </label><br>
+        <label><input type="checkbox" id="" value="firstname" checked="checked">Transmettre votre <strong>prénom</strong></label><br>
+        <label><input type="checkbox" id="" value="name">Transmettre votre <strong>nom</strong></label><br>
+        <label><input type="checkbox" id="" value="email">Transmettre votre <strong>adresse email</strong></label><br>
+    </li>
 
-<li class="button-new-tab">
-    <button class="btn btn-pl-primary btn-base btn-lti-new-window" data-target="${form_url}">
-        ${button_text} <i class="icon fa fa-external-link"></i>
-    </button>
-</li>
+    <li class="f1tier">
+        <button class="btn btn-pl-primary btn-base btn-lti-new-window" data-target="${form_url}">
+            ${button_text} <i class="icon fa fa-external-link"></i>
+        </button>
+    </li>
 
 </ul>
 
