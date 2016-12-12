@@ -27,14 +27,14 @@ from django.contrib.staticfiles.storage import staticfiles_storage
     <li class="f2tier">
         <p>Glowbl est un partenaire tiers, vous avez le choix de lui transmettre ou non les informations personnelles vous concernant...
         </p>
-        <label><input type="checkbox" id="" value="username" checked="checked">Transmettre votre <strong>pseudonyme</strong> </label><br>
-        <label><input type="checkbox" id="" value="firstname" checked="checked">Transmettre votre <strong>prénom</strong></label><br>
-        <label><input type="checkbox" id="" value="name">Transmettre votre <strong>nom</strong></label><br>
-        <label><input type="checkbox" id="" value="email">Transmettre votre <strong>adresse email</strong></label><br>
+        <label><input type="checkbox" value="username" checked="checked">Transmettre votre <strong>pseudonyme</strong> </label><br>
+        <label><input type="checkbox" value="firstname" checked="checked">Transmettre votre <strong>prénom</strong></label><br>
+        <label><input type="checkbox" value="lastname">Transmettre votre <strong>nom</strong></label><br>
+        <label><input type="checkbox" value="email">Transmettre votre <strong>adresse email</strong></label><br>
     </li>
 
     <li class="f1tier">
-        <button class="btn btn-pl-primary btn-base btn-lti-new-window" data-target="${form_url}">
+        <button class="btn btn-pl-primary btn-base btn-lti-new-window ${is_studio}" data-target="${form_url}">
             ${button_text} <i class="icon fa fa-external-link"></i>
         </button>
     </li>

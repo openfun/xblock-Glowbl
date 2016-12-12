@@ -3,6 +3,8 @@
 import pkg_resources
 from webob import Response
 from pprint import pprint
+import urllib
+
 from django.conf import settings
 
 from openedx.core.djangoapps.user_api.accounts.image_helpers import get_profile_image_names
@@ -13,6 +15,7 @@ from xblockutils.resources import ResourceLoader
 from xblockutils.studio_editable import StudioEditableXBlockMixin
 
 from lti_consumer import LtiConsumerXBlock
+from lti_consumer.oauth import get_oauth_request_signature
 from lti_consumer.lti import LtiConsumer
 
 def _(text):
@@ -25,11 +28,89 @@ GLOWBL_LTI_SECRET = getattr(settings, 'GLOWBL_LTI_SECRET', 'secret')
 GLOWBL_LTI_ID = getattr(settings, 'GLOWBL_LTI_ID', 'testtoolconsumer')
 GLOWBL_LAUNCH_URL = getattr(settings, 'GLOWBL_LAUNCH_URL', 'http://ltiapps.net/test/tp.php')
 
-BUTTON_TEXT = _("Click here !")
+BUTTON_TEXT = _("Acceder à la conférence Glowb")
+
+
+# inherit LtiConsumer for better user private information granularity
+class FUNLtiConsumer(LtiConsumer):
+
+    def get_signed_lti_parameters(self):
+        """
+        Signs LTI launch request and returns signature and OAuth parameters.
+        Arguments:
+            None
+        Returns:
+            dict: LTI launch parameters
+        """
+        # Must have parameters for correct signing from LTI:
+        lti_parameters = {
+            u'user_id': self.xblock.user_id,
+            u'oauth_callback': u'about:blank',
+            u'launch_presentation_return_url': '',
+            u'lti_message_type': u'basic-lti-launch-request',
+            u'lti_version': 'LTI-1p0',
+            u'roles': self.xblock.role,
+
+            # Parameters required for grading:
+            u'resource_link_id': self.xblock.resource_link_id,
+            u'lis_result_sourcedid': self.xblock.lis_result_sourcedid,
+
+            u'context_id': self.xblock.context_id,
+            u'custom_component_display_name': self.xblock.display_name,
+        }
+
+        if self.xblock.due:
+            lti_parameters['custom_component_due_date'] = self.xblock.due.strftime('%Y-%m-%d %H:%M:%S')
+            if self.xblock.graceperiod:
+                lti_parameters['custom_component_graceperiod'] = str(self.xblock.graceperiod.total_seconds())
+
+        if self.xblock.has_score:
+            lti_parameters.update({
+                u'lis_outcome_service_url': self.xblock.outcome_service_url
+            })
+
+        # Username, email, and language can't be sent in studio mode, because the user object is not defined.
+        # To test functionality test in LMS
+        if callable(self.xblock.runtime.get_real_user):
+            real_user_object = self.xblock.runtime.get_real_user(self.xblock.runtime.anonymous_student_id)
+
+            lti_parameters["lis_person_sourcedid"] = real_user_object.username if self.xblock.send_username else 'private'
+            user_firstname = real_user_object.first_name if self.xblock.send_firstname else 'private'
+            user_lastname = real_user_object.last_name if self.xblock.send_lastname else 'private'
+            lti_parameters["lis_person_name_full"] = user_firstname + ' ' + user_lastname
+
+            lti_parameters["lis_person_contact_email_primary"] = real_user_object.email if self.xblock.send_email else 'private'
+
+        # Appending custom parameter for signing.
+        lti_parameters.update(self.xblock.prefixed_custom_parameters)
+
+        headers = {
+            # This is needed for body encoding:
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+
+        key, secret = self.xblock.lti_provider_key_secret
+        oauth_signature = get_oauth_request_signature(key, secret, self.xblock.launch_url, headers, lti_parameters)
+
+        # Parse headers to pass to template as part of context:
+        oauth_signature = dict([param.strip().replace('"', '').split('=') for param in oauth_signature.split(',')])
+
+        oauth_signature[u'oauth_nonce'] = oauth_signature.pop(u'OAuth oauth_nonce')
+
+        # oauthlib encodes signature with
+        # 'Content-Type': 'application/x-www-form-urlencoded'
+        # so '='' becomes '%3D'.
+        # We send form via browser, so browser will encode it again,
+        # So we need to decode signature back:
+        oauth_signature[u'oauth_signature'] = urllib.unquote(oauth_signature[u'oauth_signature']).decode('utf8')
+
+        # Add LTI parameters to OAuth parameters for sending in form.
+        lti_parameters.update(oauth_signature)
+        return lti_parameters
+
 
 # FUNGlowblXBlock is a wrapper around edX LTI consumer xblock (which must be installed)
 # to ease configuration for Glowbl service
-
 
 @XBlock.needs('i18n')
 class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
@@ -57,9 +138,11 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
         self.lti_key = GLOWBL_LTI_KEY
         self.lti_secret = GLOWBL_LTI_SECRET
         self.launch_url = GLOWBL_LTI_ENDPOINT
-        self.ask_to_send_username = True
-        self.ask_to_send_email = True
         self.custom_parameters = []
+        self.send_email = False
+        self.send_username = False
+        self.send_firstname = False
+        self.send_lastname = False
 
     def _is_studio(self):
         studio = False
@@ -105,7 +188,7 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
 
     def _get_context_for_template(self):
         return {
-
+            'is_studio': 'is-studio' if self._is_studio() else '',
             'element_id': self.location.html_id(),  # pylint: disable=no-member
             'element_class': '',
             'title': self.title,
@@ -132,7 +215,10 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
         Returns:
             webob.response: HTML LTI launch form
         """
-        self.lti_consumer = LtiConsumer(self)
+        for field, value in request.GET.items():
+            setattr(self, 'send_' + field, True if value else False)
+
+        self.lti_consumer = FUNLtiConsumer(self)
         self.lti_parameters = self.lti_consumer.get_signed_lti_parameters()
         pprint(self.lti_parameters)
         loader = ResourceLoader(__name__)
@@ -147,12 +233,13 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
         This function is called by LtiConsumer to add custom values to lti parameters
         We add profile image and xblock fields.
         """
-        username = self.runtime.get_real_user(self.runtime.anonymous_student_id).username
-        images = get_profile_image_names(username)
         custom_parameters = {
-            'custom_profile_image_url': 'https://fun-mooc.fr/media/profile-images/%s' % images[50],
             'custom_title': self.title,
             'custom_description': self.description,
             'custom_rendezvous': self.rendezvous,
         }
+        if callable(self.runtime.get_real_user):
+            username = self.runtime.get_real_user(self.runtime.anonymous_student_id).username
+            images = get_profile_image_names(username)
+            custom_parameters['custom_profile_image_url'] = 'https://fun-mooc.fr/media/profile-images/%s' % images[50]
         return custom_parameters
