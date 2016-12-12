@@ -174,7 +174,7 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
         loader = ResourceLoader(__name__)
         context.update(self._get_context_for_template())
 
-        logo = self.runtime.local_resource_url(self, 'static/img/logo-glowbl.png')
+        logo = self.runtime.local_resource_url(self, 'public/img/logo-glowbl.png')
         context.update({'logo': logo})
 
         fragment.add_content(loader.render_mako_template('static/html/fun_glowbl.html', context))
