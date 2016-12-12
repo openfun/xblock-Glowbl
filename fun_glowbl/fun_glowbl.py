@@ -28,7 +28,7 @@ GLOWBL_LTI_SECRET = getattr(settings, 'GLOWBL_LTI_SECRET', 'secret')
 GLOWBL_LTI_ID = getattr(settings, 'GLOWBL_LTI_ID', 'testtoolconsumer')
 GLOWBL_LAUNCH_URL = getattr(settings, 'GLOWBL_LAUNCH_URL', 'http://ltiapps.net/test/tp.php')
 
-BUTTON_TEXT = _("Acceder à la conférence Glowb")
+BUTTON_TEXT = _(u"Acceder à la conférence Glowb")
 
 
 # inherit LtiConsumer for better user private information granularity
@@ -81,8 +81,8 @@ class FUNLtiConsumer(LtiConsumer):
 
             lti_parameters["lis_person_contact_email_primary"] = real_user_object.email if self.xblock.send_email else 'private'
 
-        # Appending custom parameter for signing.
-        lti_parameters.update(self.xblock.prefixed_custom_parameters)
+            # Appending custom parameter for signing.
+            lti_parameters.update(self.xblock.prefixed_custom_parameters)
 
         headers = {
             # This is needed for body encoding:
@@ -140,8 +140,9 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
         self.launch_url = GLOWBL_LTI_ENDPOINT
         self.custom_parameters = []
         self.send_email = False
-        self.send_username = False
-        self.send_firstname = False
+        self.send_username = True
+        self.send_firstname = True
+        self.send_profile_image = True
         self.send_lastname = False
 
     def _is_studio(self):
@@ -215,8 +216,6 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
         Returns:
             webob.response: HTML LTI launch form
         """
-        for field, value in request.GET.items():
-            setattr(self, 'send_' + field, True if value else False)
 
         self.lti_consumer = FUNLtiConsumer(self)
         self.lti_parameters = self.lti_consumer.get_signed_lti_parameters()
@@ -239,7 +238,9 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
             'custom_rendezvous': self.rendezvous,
         }
         if callable(self.runtime.get_real_user):
-            username = self.runtime.get_real_user(self.runtime.anonymous_student_id).username
-            images = get_profile_image_names(username)
+            real_user_object = self.runtime.get_real_user(self.runtime.anonymous_student_id)
+            username = real_user_object.username if self.send_username else 'private'
+            first_name = real_user_object.first_name if self.send_username else 'private'
+            images = get_profile_image_names(username) if self.send_profile_image else 'private'
             custom_parameters['custom_profile_image_url'] = 'https://fun-mooc.fr/media/profile-images/%s' % images[50]
         return custom_parameters
