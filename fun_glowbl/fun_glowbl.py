@@ -28,7 +28,7 @@ GLOWBL_LTI_SECRET = getattr(settings, 'GLOWBL_LTI_SECRET', 'secret')
 GLOWBL_LTI_ID = getattr(settings, 'GLOWBL_LTI_ID', 'testtoolconsumer')
 GLOWBL_LAUNCH_URL = getattr(settings, 'GLOWBL_LAUNCH_URL', 'http://ltiapps.net/test/tp.php')
 
-BUTTON_TEXT = _(u"Acceder à la conférence Glowb")
+BUTTON_TEXT = _(u"Accéder à la conférence Glowbl et accepter la transmission de mon nom d'utilisateur et de mon avatar")
 
 
 # inherit LtiConsumer for better user private information granularity
@@ -68,7 +68,7 @@ class FUNLtiConsumer(LtiConsumer):
             lti_parameters.update({
                 u'lis_outcome_service_url': self.xblock.outcome_service_url
             })
-
+        
         # Username, email, and language can't be sent in studio mode, because the user object is not defined.
         # To test functionality test in LMS
         if callable(self.xblock.runtime.get_real_user):
@@ -115,7 +115,7 @@ class FUNLtiConsumer(LtiConsumer):
 @XBlock.needs('i18n')
 class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
 
-    editable_fields = ['title', 'description', 'rendezvous']
+    editable_fields = ['title', 'description', 'rendezvous', 'custom_course_type', 'max_user']
 
     display_name = String(scope=Scope.settings, default=_("FUN Glowbl"),
         display_name=_("Display Name"))
@@ -131,6 +131,15 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
     rendezvous = String(scope=Scope.settings, default="",
         display_name=_("Glowbl Live Event date"),
         help=_("Enter date and hour of the event."))
+
+    custom_course_type = String(scope=Scope.settings, default="",
+        display_name=_("Custom course type"),
+        help=_('Define the type of the course. Let to default for a normal course.\nSet to "FunMoocJdR" for small groups and role play game'))
+    
+    max_user = String(scope=Scope.settings, default="",
+        display_name=_("Maximum of user"),
+        help=_("Maximum of user for the class. It is an optional field"))
+
 
     def __init__(self, *args, **kwargs):
         super(FUNGlowblXBlock, self).__init__(*args, **kwargs)
@@ -188,17 +197,20 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
         return self.lti_key, self.lti_secret
 
     def _get_context_for_template(self):
-        return {
-            'is_studio': 'is-studio' if self._is_studio() else '',
-            'element_id': self.location.html_id(),  # pylint: disable=no-member
-            'element_class': '',
-            'title': self.title,
-            'description': self.description,
-            'rendezvous': self.rendezvous,
-            'form_url': self.runtime.handler_url(self, 'lti_launch_handler').rstrip('/?'),
-            'button_text': BUTTON_TEXT,
-            'launch_url': GLOWBL_LAUNCH_URL,
-        }
+            return {
+                'is_studio': 'is-studio' if (
+                    self._is_studio())  else '',
+                'element_id': self.location.html_id(),  # pylint: disable=no-member
+                'element_class': '',
+                'title': self.title,
+                'description': self.description,
+                'rendezvous': self.rendezvous,
+                'custom_course_type': self.custom_course_type,
+                'max_user':self.max_user,
+                'form_url': self.runtime.handler_url(self, 'lti_launch_handler').rstrip('/?'),
+                'button_text': BUTTON_TEXT,
+                'launch_url': GLOWBL_LAUNCH_URL,
+            }
 
     @XBlock.handler
     def lti_launch_handler(self, request, suffix=''):  # pylint: disable=unused-argument
@@ -236,6 +248,8 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
             'custom_title': self.title,
             'custom_description': self.description,
             'custom_rendezvous': self.rendezvous,
+            'custom_course_type': self.custom_course_type,
+            'custom_max_user': self.max_user,
         }
         if callable(self.runtime.get_real_user):
             real_user_object = self.runtime.get_real_user(self.runtime.anonymous_student_id)

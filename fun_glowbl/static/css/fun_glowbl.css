@@ -37,3 +37,10 @@
 
 .fun_glowbl_block .button-new-tab {
 }
+
+.f2tier p {
+    text-align: justify;
+    text-justify: inter-word;
+    padding-right: 5px;
+    font-size: 15px;
+}
