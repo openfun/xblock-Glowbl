@@ -24,7 +24,7 @@ setup(
     name='fun_glowbl-xblock',
     version='0.1',
     description='fun_glowbl XBlock',   # TODO: write a better description.
-    license='UNKNOWN',          # TODO: choose a license: 'AGPL v3' and 'Apache 2.0' are popular.
+    license='License :: OSI Approved :: GNU Affero General Public License v3',
     packages=[
         'fun_glowbl',
     ],
