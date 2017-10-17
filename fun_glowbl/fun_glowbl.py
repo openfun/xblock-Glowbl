@@ -27,6 +27,7 @@ GLOWBL_LTI_KEY = getattr(settings, 'GLOWBL_LTI_KEY', 'jisc.ac.uk')
 GLOWBL_LTI_SECRET = getattr(settings, 'GLOWBL_LTI_SECRET', 'secret')
 GLOWBL_LTI_ID = getattr(settings, 'GLOWBL_LTI_ID', 'testtoolconsumer')
 GLOWBL_LAUNCH_URL = getattr(settings, 'GLOWBL_LAUNCH_URL', 'http://ltiapps.net/test/tp.php')
+GLOWBL_COLL_OPT = "FunMoocJdR"
 
 BUTTON_TEXT = _(u"Accéder à la conférence Glowbl et accepter la transmission de mon nom d'utilisateur et de mon avatar")
 
@@ -68,7 +69,7 @@ class FUNLtiConsumer(LtiConsumer):
             lti_parameters.update({
                 u'lis_outcome_service_url': self.xblock.outcome_service_url
             })
-        
+
         # Username, email, and language can't be sent in studio mode, because the user object is not defined.
         # To test functionality test in LMS
         if callable(self.xblock.runtime.get_real_user):
@@ -132,10 +133,10 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
         display_name=_("Glowbl Live Event date"),
         help=_("Enter date and hour of the event."))
 
-    custom_course_type = String(scope=Scope.settings, default="",
+    custom_course_type = String(scope=Scope.settings, default="0",
         display_name=_("Custom course type"),
-        help=_('Define the type of the course. Let to default for a normal course.\nSet to "FunMoocJdR" for small groups and role play game'))
-    
+        help=_('Define the type of the course. Let to default "0" for a normal course. Set to "1" for small groups and role play game'))
+
     max_user = String(scope=Scope.settings, default="",
         display_name=_("Maximum of user"),
         help=_("Maximum of user for the class. It is an optional field"))
@@ -143,16 +144,16 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
 
     def __init__(self, *args, **kwargs):
         super(FUNGlowblXBlock, self).__init__(*args, **kwargs)
-        self.lti_id = GLOWBL_LTI_ID
-        self.lti_key = GLOWBL_LTI_KEY
-        self.lti_secret = GLOWBL_LTI_SECRET
-        self.launch_url = GLOWBL_LTI_ENDPOINT
-        self.custom_parameters = []
-        self.send_email = False
-        self.send_username = True
-        self.send_firstname = True
+        self.lti_id             = GLOWBL_LTI_ID
+        self.lti_key            = GLOWBL_LTI_KEY
+        self.lti_secret         = GLOWBL_LTI_SECRET
+        self.launch_url         = GLOWBL_LTI_ENDPOINT
+        self.custom_parameters  = []
+        self.send_email         = False
+        self.send_username      = True
+        self.send_firstname     = True
         self.send_profile_image = True
-        self.send_lastname = False
+        self.send_lastname      = False
 
     def _is_studio(self):
         studio = False
@@ -248,9 +249,15 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
             'custom_title': self.title,
             'custom_description': self.description,
             'custom_rendezvous': self.rendezvous,
-            'custom_course_type': self.custom_course_type,
             'custom_max_user': self.max_user,
         }
+        # user fat finger prevention comparing on lower stripped strings
+        if self.custom_course_type.strip().lower() == "1":
+            custom_parameters['custom_course_type'] = GLOWBL_COLL_OPT
+            valid_number_of_user = self.max_user.strip().isdigit()
+            if valid_number_of_user:
+                custom_parameters['custom_max_user'] = int(self.max_user)
+
         if callable(self.runtime.get_real_user):
             real_user_object = self.runtime.get_real_user(self.runtime.anonymous_student_id)
             username = real_user_object.username if self.send_username else 'private'
