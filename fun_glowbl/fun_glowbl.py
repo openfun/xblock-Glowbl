@@ -252,11 +252,11 @@ class FUNGlowblXBlock(LtiConsumerXBlock, StudioEditableXBlockMixin, XBlock):
             'custom_max_user': self.max_user,
         }
         # user fat finger prevention comparing on lower stripped strings
-        if self.custom_course_type.strip().lower() == "1":
+        if self.custom_course_type.strip() == "1":
             custom_parameters['custom_course_type'] = GLOWBL_COLL_OPT
             valid_number_of_user = self.max_user.strip().isdigit()
             if valid_number_of_user:
-                custom_parameters['custom_max_user'] = int(self.max_user)
+                custom_parameters['custom_max_user'] = self.max_user
 
         if callable(self.runtime.get_real_user):
             real_user_object = self.runtime.get_real_user(self.runtime.anonymous_student_id)
