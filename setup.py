@@ -22,7 +22,7 @@ def package_data(pkg, roots):
 
 setup(
     name='fun_glowbl-xblock',
-    version='0.1',
+    version='0.1.1',
     description='fun_glowbl XBlock',   # TODO: write a better description.
     license='License :: OSI Approved :: GNU Affero General Public License v3',
     packages=[
